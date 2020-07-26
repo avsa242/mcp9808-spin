@@ -24,7 +24,7 @@ CON
     TEMP            = $05           ' R/O
     MFR_ID          = $06           ' R/O
     DEV_ID          = $07           ' R/O
-        DEVID_RESP  = $0054_0004    ' Expected response: MFR_DEV
+        DEVID_RESP  = $0054_0400    ' Expected response: MFR_DEV
     RESOLUTION      = $08           ' R/W
 
 #ifndef __propeller2__

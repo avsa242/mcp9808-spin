@@ -33,10 +33,14 @@ OBJ
     time        : "time"
     mcp9808     : "sensor.temperature.mcp9808.i2c"
 
-PUB Main
+PUB Main | t
 
     Setup
-
+    mcp9808.tempscale(mcp9808#F)
+    repeat
+        t := mcp9808.temperature
+        ser.position(0, 5)
+        ser.dec(t)
     FlashLED(LED, 100)     ' Signal execution finished
 
 PUB Setup

@@ -18,8 +18,13 @@ CON
     DEF_HZ            = 100_000
     I2C_MAX_FREQ      = core#I2C_MAX_FREQ
 
+' Temperature scales
+    C               = 0
+    F               = 1
+
 VAR
 
+    byte _temp_scale
 
 OBJ
 
@@ -44,10 +49,43 @@ PUB Start(SCL_PIN, SDA_PIN, I2C_HZ): okay
 
 PUB Stop{}
 
+    i2c.terminate
+
 PUB DeviceID: id
 ' Read device identification
-    readreg(core#MFR_ID, 2, @id.byte[1])
-    readreg(core#DEV_ID, 2, @id.byte[0])
+'   Returns:
+'       Manufacturer ID: $0054 (MSW)
+'       Revision: $0400 (LSW)
+    readreg(core#MFR_ID, 2, @id.word[1])
+    readreg(core#DEV_ID, 2, @id.word[0])
+
+PUB Temperature: temp | whole, part
+' Current Temperature, in hundredths of a degree
+'   Returns: Integer
+'   (e.g., 2105 is equivalent to 21.05 deg C)
+    temp := $00
+    readreg(core#TEMP, 2, @temp)
+
+    temp := (temp << 19) ~> 19                              ' Extend sign bit (#13)
+    whole := (temp / 16) * 100                              ' Scale up to hundredths
+    part := ((temp // 16) * 0_0625{XXX curr_res}) / 100     ' Calc based on current resolution
+
+    if _temp_scale == F
+        return (((whole+part) * 9_00) / 5_00) + 32_00
+    else
+        return whole+part
+
+PUB TempScale(scale): curr_scale
+' Set temperature scale used by Temperature method
+'   Valid values:
+'       C (0): Celsius
+'       F (1): Fahrenheit
+'   Any other value returns the current setting
+    case scale
+        C, F:
+            _temp_scale := scale
+        OTHER:
+            return _temp_scale
 
 PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' read num_bytes from the slave device into the address stored in buff_addr
@@ -61,8 +99,8 @@ PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 
             i2c.start{}                                             ' Rs
             i2c.write (SLAVE_RD)                                    ' SL|R
-            repeat tmp from 0 to nr_bytes-1
-                byte[buff_addr][tmp] := i2c.read(tmp == nr_bytes-1) ' R 0..n, NAK last byte to signal complete
+            repeat tmp from nr_bytes-1 to 0
+                byte[buff_addr][tmp] := i2c.read(tmp == 0)          ' R 0..n, NAK last byte to signal completei
             i2c.stop{}                                              ' P
         OTHER:
             return
