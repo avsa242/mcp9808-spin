@@ -44,7 +44,7 @@ CON
 
     ALERT_UPPER     = $02           ' R/W
     ALERT_LOWER     = $03           ' R/W
-    TEMP_CRIT       = $04           ' R/W
+    ALERT_CRIT      = $04           ' R/W
     TEMP            = $05           ' R/O
     MFR_ID          = $06           ' R/O
     DEV_ID          = $07           ' R/O

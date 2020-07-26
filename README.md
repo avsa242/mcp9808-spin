@@ -10,6 +10,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for Microchip M
 * Read temperature in hundredths of a degree
 * Set temperature scale to Celsius or Fahrenheit
 * Power sensor on/off
+* Interrupts: set low, high, critical thresholds, enable low, high, critical, or _only_ critical interrupts, set interrupts active low or active high, set comparator or interrupt output mode
 
 ## Requirements
 
@@ -36,4 +37,4 @@ P1/SPIN1:
 - [ ] Port to P2/SPIN2
 - [x] Add support for changing sensor resolution
 - [x] Add support for power on/off
-- [ ] Add support for interrupts
+- [x] Add support for interrupts
