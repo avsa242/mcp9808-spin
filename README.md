@@ -9,6 +9,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for Microchip M
 
 * Read temperature in hundredths of a degree
 * Set temperature scale to Celsius or Fahrenheit
+* Power sensor on/off
 
 ## Requirements
 
@@ -34,5 +35,5 @@ P1/SPIN1:
 ## TODO
 - [ ] Port to P2/SPIN2
 - [ ] Add support for changing sensor resolution
-- [ ] Add support for power on/off
+- [x] Add support for power on/off
 - [ ] Add support for interrupts

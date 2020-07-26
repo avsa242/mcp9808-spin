@@ -42,7 +42,7 @@ PUB Start(SCL_PIN, SDA_PIN, I2C_HZ): okay
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)        ' I2C object started?
                 time.msleep (1)
                 if i2c.present (SLAVE_WR)                           ' Response from device?
-                    if deviceid == core#DEVID_RESP
+                    if deviceid{} == core#DEVID_RESP
                         return okay
 
     return FALSE                                                    ' If we got here, something went wrong
@@ -51,7 +51,12 @@ PUB Stop{}
 
     i2c.terminate
 
-PUB DeviceID: id
+PUB Defaults{}
+' Factory defaults
+    tempscale(C)
+    powered(TRUE)
+
+PUB DeviceID{}: id
 ' Read device identification
 '   Returns:
 '       Manufacturer ID: $0054 (MSW)
@@ -59,7 +64,24 @@ PUB DeviceID: id
     readreg(core#MFR_ID, 2, @id.word[1])
     readreg(core#DEV_ID, 2, @id.word[0])
 
-PUB Temperature: temp | whole, part
+PUB Powered(enabled): curr_state
+' Enable sensor power
+'   Valid values: *TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := $00
+    readreg(core#CONFIG, 2, @curr_state)
+    case ||(enabled)
+        0, 1:
+            enabled := ||(enabled)
+            enabled := (enabled ^ 1) << core#FLD_SHDN
+        OTHER:
+            return (((curr_state >> core#FLD_SHDN) & %1) ^ 1) == 1
+
+    curr_state &= core#MASK_SHDN
+    curr_state := (curr_state | enabled) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @curr_state)
+
+PUB Temperature{}: temp | whole, part
 ' Current Temperature, in hundredths of a degree
 '   Returns: Integer
 '   (e.g., 2105 is equivalent to 21.05 deg C)
@@ -115,7 +137,7 @@ PRI writeReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             repeat tmp from 0 to 1
                 i2c.write(cmd_packet.byte[tmp])                     ' SL|W, reg_nr
 
-            repeat tmp from 0 to nr_bytes-1
+            repeat tmp from nr_bytes-1 to 0
                 i2c.write (byte[buff_addr][tmp])                    ' W 0..n
             i2c.stop{}                                              ' P
         OTHER:

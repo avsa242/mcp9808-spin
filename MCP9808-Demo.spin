@@ -25,6 +25,9 @@ CON
     I2C_HZ      = 100_000
 ' --
 
+    C           = mcp9808#C
+    F           = mcp9808#F
+
 OBJ
 
     ser         : "com.serial.terminal.ansi"
@@ -33,23 +36,26 @@ OBJ
     time        : "time"
     mcp9808     : "sensor.temperature.mcp9808.i2c"
 
-PUB Main | t
+PUB Main{} | t
 
-    Setup
-    mcp9808.tempscale(mcp9808#F)
+    Setup{}
+    mcp9808.tempscale(C)
+
     repeat
-        t := mcp9808.temperature
+        t := mcp9808.temperature{}
         ser.position(0, 5)
         ser.dec(t)
+
     FlashLED(LED, 100)     ' Signal execution finished
 
-PUB Setup
+PUB Setup{}
 
     repeat until ser.startrxtx (SER_RX, SER_TX, 0, SER_BAUD)
     time.msleep(30)
-    ser.clear
+    ser.clear{}
     ser.str(string("Serial terminal started", ser#CR, ser#LF))
     if mcp9808.start(I2C_SCL, I2C_SDA, I2C_HZ)
+        mcp9808.defaults{}
         ser.str(string("MCP9808 driver started", ser#CR, ser#LF))
     else
         ser.str(string("MCP9808 driver failed to start - halting", ser#CR, ser#LF))

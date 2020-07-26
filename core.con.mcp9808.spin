@@ -17,7 +17,31 @@ CON
 
 '' Register definitions
     RFU             = $00           ' R/O
+
     CONFIG          = $01           ' R/W
+    CONFIG_MASK     = $07FF
+        FLD_HYST    = 9
+        FLD_SHDN    = 8
+        FLD_CRTLOC  = 7
+        FLD_WINLOC  = 6
+        FLD_INTCLR  = 5
+        FLD_ALTSTAT = 4
+        FLD_ALTCNT  = 3
+        FLD_ALTSEL  = 2
+        FLD_ALTPOL  = 1
+        FLD_ALTMOD  = 0
+        BITS_HYST   = %11
+        MASK_HYST   = CONFIG_MASK ^ (BITS_HYST << FLD_HYST)
+        MASK_SHDN   = CONFIG_MASK ^ (1 << FLD_SHDN)
+        MASK_CRTLOC = CONFIG_MASK ^ (1 << FLD_CRTLOC)
+        MASK_WINLOC = CONFIG_MASK ^ (1 << FLD_WINLOC)
+        MASK_INTCLR = CONFIG_MASK ^ (1 << FLD_INTCLR)
+        MASK_ALTSTAT= CONFIG_MASK ^ (1 << FLD_ALTSTAT)
+        MASK_ALTCNT = CONFIG_MASK ^ (1 << FLD_ALTCNT)
+        MASK_ALTSEL = CONFIG_MASK ^ (1 << FLD_ALTSEL)
+        MASK_ALTPOL = CONFIG_MASK ^ (1 << FLD_ALTPOL)
+        MASK_ALTMOD = CONFIG_MASK ^ (1 << FLD_ALTMOD)
+
     ALERT_UPPER     = $02           ' R/W
     ALERT_LOWER     = $03           ' R/W
     TEMP_CRIT       = $04           ' R/W
