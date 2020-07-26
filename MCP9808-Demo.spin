@@ -39,7 +39,8 @@ OBJ
 PUB Main{} | t
 
     Setup{}
-    mcp9808.tempscale(C)
+    mcp9808.tempscale(C)                                    ' C (0), F (1)
+    mcp9808.tempres(0_0625)                                 ' 0_0625, 0_1250, 0_2500, 0_5000 (Resolution: 0.0625C, 0.125, 0.25, 0.5)
 
     repeat
         t := mcp9808.temperature{}

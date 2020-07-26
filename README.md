@@ -34,6 +34,6 @@ P1/SPIN1:
 
 ## TODO
 - [ ] Port to P2/SPIN2
-- [ ] Add support for changing sensor resolution
+- [x] Add support for changing sensor resolution
 - [x] Add support for power on/off
 - [ ] Add support for interrupts

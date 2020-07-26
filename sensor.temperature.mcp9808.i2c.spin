@@ -55,6 +55,7 @@ PUB Defaults{}
 ' Factory defaults
     tempscale(C)
     powered(TRUE)
+    tempres(0_0625)
 
 PUB DeviceID{}: id
 ' Read device identification
@@ -90,17 +91,36 @@ PUB Temperature{}: temp | whole, part
 
     temp := (temp << 19) ~> 19                              ' Extend sign bit (#13)
     whole := (temp / 16) * 100                              ' Scale up to hundredths
-    part := ((temp // 16) * 0_0625{XXX curr_res}) / 100     ' Calc based on current resolution
+    part := ((temp // 16) * 0_0625) / 100
 
     if _temp_scale == F
         return (((whole+part) * 9_00) / 5_00) + 32_00
     else
         return whole+part
 
+PUB TempRes(deg_c): curr_res
+' Set temperature resolution, in degrees Celsius (fractional)
+'   Valid values:
+'       Value   represents      Conversion time
+'      *0_0625  0.0625C         (250ms)
+'       0_1250  0.125C          (130ms)
+'       0_2500  0.25C           (65ms)
+'       0_5000  0.5C            (30ms)
+'   Any other value polls the chip and returns the current setting
+    case deg_c
+        0_0625, 0_1250, 0_2500, 0_5000:
+            deg_c := lookdownz(deg_c: 0_5000, 0_2500, 0_1250, 0_0625)
+        OTHER:
+            curr_res := $00
+            readreg(core#RESOLUTION, 1, @curr_res)
+            return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
+
+    writereg(core#RESOLUTION, 1, @deg_c)
+
 PUB TempScale(scale): curr_scale
 ' Set temperature scale used by Temperature method
 '   Valid values:
-'       C (0): Celsius
+'      *C (0): Celsius
 '       F (1): Fahrenheit
 '   Any other value returns the current setting
     case scale
