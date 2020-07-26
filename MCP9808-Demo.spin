@@ -34,6 +34,7 @@ OBJ
     cfg         : "core.con.boardcfg.flip"
     io          : "io"
     time        : "time"
+    int         : "string.integer"
     mcp9808     : "sensor.temperature.mcp9808.i2c"
 
 PUB Main{} | t
@@ -41,13 +42,36 @@ PUB Main{} | t
     Setup{}
     mcp9808.tempscale(C)                                    ' C (0), F (1)
     mcp9808.tempres(0_0625)                                 ' 0_0625, 0_1250, 0_2500, 0_5000 (Resolution: 0.0625C, 0.125, 0.25, 0.5)
-
+    ser.hidecursor{}
     repeat
         t := mcp9808.temperature{}
         ser.position(0, 5)
-        ser.dec(t)
-
+        ser.str(string("Temperature: "))
+        decimaldot(t, 100)
+        ser.char(lookupz(mcp9808.tempscale(-2): "C", "F"))
+    until ser.rxcheck{} == "q"
+    ser.showcursor{}
     FlashLED(LED, 100)     ' Signal execution finished
+
+PRI DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp
+' Display a fixed-point scaled up number in decimal-dot notation - scale it back down by divisor
+'   e.g., Decimal (314159, 100000) would display 3.14159 on the terminal
+'   scaled: Fixed-point scaled up number
+'   divisor: Divide scaled-up number by this amount
+    whole := scaled / divisor
+    tmp := divisor
+    places := 0
+
+    repeat
+        tmp /= 10
+        places++
+    until tmp == 1
+    part := int.deczeroed(||(scaled // divisor), places)
+
+    ser.dec (whole)
+    ser.char (".")
+    ser.str (part)
+    ser.clearline(ser#CLR_CUR_TO_END)
 
 PUB Setup{}
 

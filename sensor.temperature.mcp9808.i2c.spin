@@ -297,7 +297,7 @@ PRI calcTempWord(temp_c): temp_word
         temp_word |= constant(1 << 12)
 
 PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
-'' read num_bytes from the slave device into the address stored in buff_addr
+' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr                                                     ' Basic register validation
         $00..$08:
             cmd_packet.byte[0] := SLAVE_WR
@@ -309,13 +309,13 @@ PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             i2c.start{}                                             ' Rs
             i2c.write (SLAVE_RD)                                    ' SL|R
             repeat tmp from nr_bytes-1 to 0
-                byte[buff_addr][tmp] := i2c.read(tmp == 0)          ' R 0..n, NAK last byte to signal completei
+                byte[buff_addr][tmp] := i2c.read(tmp == 0)          ' R 0..n, NAK last byte to signal complete
             i2c.stop{}                                              ' P
         OTHER:
             return
 
 PRI writeReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
-'' write num_bytes to the slave device from the address stored in buff_addr
+' Write num_bytes to the slave device from the address stored in buff_addr
     case reg_nr                                                     ' Basic register validation
         $01..$04, $08:
             cmd_packet.byte[0] := SLAVE_WR
