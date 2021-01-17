@@ -94,9 +94,8 @@ PUB IntActiveState(state): curr_state
         other:
             return (curr_state >> core#ALTPOL) & 1
 
-    curr_state &= core#ALTPOL_MASK
-    curr_state := (curr_state | state) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_state)
+    state := ((curr_state & core#ALTPOL_MASK) | state)
+    writereg(core#CONFIG, 2, @state)
 
 PUB IntClear{} | tmp
 ' Clear interrupt
@@ -131,9 +130,8 @@ PUB IntHysteresis(deg): curr_setting
             curr_setting := (curr_setting >> core#HYST) & core#HYST_BITS
             return lookupz(curr_setting: 0, 1_5, 3_0, 6_0)
 
-    curr_setting &= core#HYST_MASK
-    curr_setting := (curr_setting | deg) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_setting)
+    deg := ((curr_setting & core#HYST_MASK) | deg)
+    writereg(core#CONFIG, 2, @deg)
 
 PUB IntMask(mask): curr_mask
 ' Set interrupt mask
@@ -147,11 +145,10 @@ PUB IntMask(mask): curr_mask
         0, 1:
             mask <<= core#ALTSEL
         other:
-            return (curr_mask >> core#ALTSEL) & 1
+            return ((curr_mask >> core#ALTSEL) & 1)
 
-    curr_mask &= core#ALTSEL_MASK
-    curr_mask := (curr_mask | mask) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_mask)
+    mask := ((curr_mask & core#ALTSEL_MASK) | mask)
+    writereg(core#CONFIG, 2, @mask)
 
 PUB IntMode(mode): curr_mode
 ' Set interrupt mode
@@ -166,25 +163,23 @@ PUB IntMode(mode): curr_mode
         other:
             return curr_mode & 1
 
-    curr_mode &= core#ALTMOD_MASK
-    curr_mode := (curr_mode | mode) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_mode)
+    mode := ((curr_mode & core#ALTMOD_MASK) | mode)
+    writereg(core#CONFIG, 2, @mode)
 
-PUB IntsEnabled(enable): curr_state
+PUB IntsEnabled(state): curr_state
 ' Enable interrupts
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
     readreg(core#CONFIG, 2, @curr_state)
-    case ||enable
+    case ||state
         0, 1:
-            enable := ||(enable) << core#ALTCNT
+            state := ||(state) << core#ALTCNT
         other:
-            return ((curr_state >> core#ALTCNT) & 1) == 1
+            return (((curr_state >> core#ALTCNT) & 1) == 1)
 
-    curr_state &= core#ALTCNT_MASK
-    curr_state := (curr_state | enable) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_state)
+    state := ((curr_state & core#ALTCNT_MASK) | state)
+    writereg(core#CONFIG, 2, @state)
 
 PUB IntTempCritThresh(level): curr_lvl
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
@@ -222,22 +217,20 @@ PUB IntTempLoThresh(level): curr_lvl
             readreg(core#ALERT_LOWER, 2, @curr_lvl)
             return calctemp(curr_lvl)
 
-PUB Powered(enabled): curr_state
+PUB Powered(state): curr_state
 ' Enable sensor power
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
     readreg(core#CONFIG, 2, @curr_state)
-    case ||(enabled)
+    case ||(state)
         0, 1:
-            enabled := ||(enabled)
-            enabled := (enabled ^ 1) << core#SHDN
+            state := (||(state) ^ 1) << core#SHDN
         other:
-            return (((curr_state >> core#SHDN) & 1) ^ 1) == 1
+            return ((((curr_state >> core#SHDN) & 1) ^ 1) == 1)
 
-    curr_state &= core#SHDN_MASK
-    curr_state := (curr_state | enabled) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_state)
+    state := ((curr_state & core#SHDN_MASK) | state)
+    writereg(core#CONFIG, 2, @state)
 
 PUB Temperature{}: temp
 ' Current Temperature, in hundredths of a degree
@@ -264,12 +257,11 @@ PUB TempRes(deg_c): curr_res
     case deg_c
         0_0625, 0_1250, 0_2500, 0_5000:
             deg_c := lookdownz(deg_c: 0_5000, 0_2500, 0_1250, 0_0625)
+            writereg(core#RESOLUTION, 1, @deg_c)
         other:
             curr_res := 0
             readreg(core#RESOLUTION, 1, @curr_res)
             return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
-
-    writereg(core#RESOLUTION, 1, @deg_c)
 
 PUB TempScale(scale): curr_scale
 ' Set temperature scale used by Temperature method
