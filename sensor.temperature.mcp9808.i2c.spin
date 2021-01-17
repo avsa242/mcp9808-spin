@@ -55,7 +55,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
 }   I2C_HZ =< core#I2C_MAX_FREQ                 ' validate pins and bus freq
         if okay := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
             time.msleep(1)
-            if i2c.present (SLAVE_WR)           ' check device bus presence
+            if i2c.present(SLAVE_WR)            ' check device bus presence
                 if deviceid{} == core#DEVID_RESP
                     return okay
     ' if this point is reached, something above failed

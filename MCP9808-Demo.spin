@@ -20,7 +20,7 @@ CON
 
     I2C_SCL     = 28
     I2C_SDA     = 29
-    I2C_HZ      = 100_000
+    I2C_HZ      = 400_000
 ' --
 
     C           = mcp9808#C
