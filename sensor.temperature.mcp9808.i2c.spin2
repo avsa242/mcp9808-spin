@@ -76,7 +76,7 @@ PUB DeviceID(): id
     readreg(core.MFR_ID, 2, @id.word[1])
     readreg(core.DEV_ID, 2, @id.word[0])
 
-PUB IntActiveState(state): curr_state
+PUB IntActiveState(state=-2): curr_state
 ' Set interrupt active state
 '   Valid values: *LOW (0), HIGH (1)
 '   Any other value polls the chip and returns the current setting
@@ -107,7 +107,7 @@ PUB Interrupt(): active_ints
     readreg(core.TEMP, 2, @active_ints)
     active_ints >>= 13
 
-PUB IntHysteresis(deg): curr_setting
+PUB IntHysteresis(deg=-2): curr_setting
 ' Set interrupt Upper and Lower threshold hysteresis, in degrees Celsius
 '   Valid values:
 '       Value   represents
@@ -128,7 +128,7 @@ PUB IntHysteresis(deg): curr_setting
     deg := ((curr_setting & core.HYST_MASK) | deg)
     writereg(core.CONFIG, 2, @deg)
 
-PUB IntMask(mask): curr_mask
+PUB IntMask(mask=-2): curr_mask
 ' Set interrupt mask
 '   Valid values:
 '      *0: Interrupts asserted for Upper, Lower, and Critical thresholds
@@ -145,7 +145,7 @@ PUB IntMask(mask): curr_mask
     mask := ((curr_mask & core.ALTSEL_MASK) | mask)
     writereg(core.CONFIG, 2, @mask)
 
-PUB IntMode(mode): curr_mode
+PUB IntMode(mode=-2): curr_mode
 ' Set interrupt mode
 '   Valid values:
 '      *COMP (0): Comparator output
@@ -161,7 +161,7 @@ PUB IntMode(mode): curr_mode
     mode := ((curr_mode & core.ALTMOD_MASK) | mode)
     writereg(core.CONFIG, 2, @mode)
 
-PUB IntsEnabled(state): curr_state
+PUB IntsEnabled(state=-2): curr_state
 ' Enable interrupts
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -176,7 +176,7 @@ PUB IntsEnabled(state): curr_state
     state := ((curr_state & core.ALTCNT_MASK) | state)
     writereg(core.CONFIG, 2, @state)
 
-PUB IntTempCritThresh(level): curr_lvl
+PUB IntTempCritThresh(level=-65536): curr_lvl
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -188,7 +188,7 @@ PUB IntTempCritThresh(level): curr_lvl
             readreg(core.ALERT_CRIT, 2, @curr_lvl)
             return calctemp(curr_lvl)
 
-PUB IntTempHiThresh(level): curr_lvl
+PUB IntTempHiThresh(level=-65536): curr_lvl
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -200,7 +200,7 @@ PUB IntTempHiThresh(level): curr_lvl
             readreg(core.ALERT_UPPER, 2, @curr_lvl)
             return calctemp(curr_lvl)
 
-PUB IntTempLoThresh(level): curr_lvl
+PUB IntTempLoThresh(level=-65536): curr_lvl
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -212,7 +212,7 @@ PUB IntTempLoThresh(level): curr_lvl
             readreg(core.ALERT_LOWER, 2, @curr_lvl)
             return calctemp(curr_lvl)
 
-PUB Powered(state): curr_state
+PUB Powered(state=-2): curr_state
 ' Enable sensor power
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -240,7 +240,7 @@ PUB Temperature(): temp
     else
         return temp
 
-PUB TempRes(deg_c): curr_res
+PUB TempRes(deg_c=-2): curr_res
 ' Set temperature resolution, in degrees Celsius (fractional)
 '   Valid values:
 '       Value   represents      Conversion time
@@ -258,7 +258,7 @@ PUB TempRes(deg_c): curr_res
             readreg(core.RESOLUTION, 1, @curr_res)
             return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
 
-PUB TempScale(scale): curr_scale
+PUB TempScale(scale=-2): curr_scale
 ' Set temperature scale used by Temperature method
 '   Valid values:
 '      *C (0): Celsius
