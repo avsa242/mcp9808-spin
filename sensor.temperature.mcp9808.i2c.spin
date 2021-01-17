@@ -34,7 +34,7 @@ CON
 
 VAR
 
-    byte _temp_scale
+    byte _temp_scale, _addr_bits
 
 OBJ
 
@@ -46,16 +46,19 @@ PUB Null{}
 ' This is not a top-level object
 
 PUB Start{}: okay
-' Start using "standard" Propeller I2C pins and 100kHz
-    return startx(DEF_SCL, DEF_SDA, DEF_HZ)
+' Start using "standard" Propeller I2C pins, default slave address and 100kHz
+    return startx(DEF_SCL, DEF_SDA, DEF_HZ, %000)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): okay
 ' Start using custom I/O pins and I2C bus speed
+    ' validate pins, bus freq, and optional slave address bits:
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
-}   I2C_HZ =< core#I2C_MAX_FREQ                 ' validate pins and bus freq
+}   I2C_HZ =< core#I2C_MAX_FREQ and lookdown(ADDR_BITS: %000..%111)
         if okay := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
+            _addr_bits := ADDR_BITS << 1
             time.msleep(1)
-            if i2c.present(SLAVE_WR)            ' check device bus presence
+            ' check device bus presence:
+            if i2c.present(SLAVE_WR | _addr_bits)
                 if deviceid{} == core#DEVID_RESP
                     return okay
     ' if this point is reached, something above failed
@@ -300,14 +303,14 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Read nr_bytes from the slave device into ptr_buff
     case reg_nr                                 ' validate reg number
         $00..$08:
-            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}
             repeat tmp from 0 to 1
                 i2c.write(cmd_pkt.byte[tmp])
 
             i2c.start{}
-            i2c.write(SLAVE_RD)
+            i2c.write(SLAVE_RD | _addr_bits)
             repeat tmp from nr_bytes-1 to 0     ' read MS byte first
                 byte[ptr_buff][tmp] := i2c.read(tmp == 0)
             i2c.stop{}
@@ -318,7 +321,7 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Write nr_bytes to the slave device from ptr_buff
     case reg_nr
         $01..$04, $08:
-            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr & $0F
             i2c.start{}
             repeat tmp from 0 to 1

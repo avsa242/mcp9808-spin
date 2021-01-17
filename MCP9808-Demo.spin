@@ -20,7 +20,8 @@ CON
 
     I2C_SCL     = 28
     I2C_SDA     = 29
-    I2C_HZ      = 400_000
+    I2C_HZ      = 400_000                       ' max is 400_000
+    ADDR_BITS   = %000                          ' %000..%111
 ' --
 
     C           = mcp9808#C
@@ -78,7 +79,7 @@ PUB Setup{}
     time.msleep(30)
     ser.clear{}
     ser.strln(string("Serial terminal started"))
-    if mcp9808.startx(I2C_SCL, I2C_SDA, I2C_HZ)
+    if mcp9808.startx(I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS)
         mcp9808.defaults{}
         ser.strln(string("MCP9808 driver started"))
     else
