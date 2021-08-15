@@ -5,10 +5,14 @@
     Description: Demo of the MCP9808 driver
     Copyright (c) 2021
     Started Jul 26, 2020
-    Updated Jan 17, 2021
+    Updated Aug 15, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
+' Uncomment one of the below to choose the SPIN or PASM I2C engine
+#define MCP9808_SPIN
+'#define MCP9808_PASM
+
 CON
 
     _xinfreq    = cfg#_xinfreq
@@ -81,7 +85,11 @@ PUB Setup{}
     ser.strln(string("Serial terminal started"))
     if mcp9808.startx(I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS)
         mcp9808.defaults{}
-        ser.strln(string("MCP9808 driver started"))
+#ifdef MCP9808_SPIN
+        ser.strln(string("MCP9808 driver started (I2C-SPIN)"))
+#elseifdef MCP9808_PASM
+        ser.strln(string("MCP9808 driver started (I2C-PASM)"))
+#endif
     else
         ser.strln(string("MCP9808 driver failed to start - halting"))
         repeat
