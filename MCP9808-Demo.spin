@@ -3,15 +3,12 @@
     Filename: MCP9808-Demo.spin
     Author: Jesse Burt
     Description: Demo of the MCP9808 driver
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Jul 26, 2020
-    Updated Aug 15, 2021
+    Updated Feb 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
-' Uncomment one of the below to choose the SPIN or PASM I2C engine
-#define MCP9808_SPIN
-'#define MCP9808_PASM
 
 CON
 
