@@ -25,8 +25,11 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81), FlexSpin (tested with 6.0.0-beta)
-* P2/SPIN2: FlexSpin (tested with 6.0.0-beta)
+* P1/SPIN1 OpenSpin (bytecode): Untested (deprecated)
+* P1/SPIN1 FlexSpin (bytecode): OK, tested with 5.9.7-beta
+* P1/SPIN1 FlexSpin (native): OK, tested with 5.9.7-beta
+* ~~P2/SPIN2 FlexSpin (nu-code): FTBFS, tested with 5.9.7-beta~~
+* P2/SPIN2 FlexSpin (native): OK, tested with 5.9.7-beta
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
@@ -35,9 +38,3 @@ P2/SPIN2:
 
 * Very early in development - may malfunction, or outright fail to build
 
-## TODO
-- [x] Port to P2/SPIN2
-- [x] Add support for changing sensor resolution
-- [x] Add support for power on/off
-- [x] Add support for interrupts
-- [x] Add support for alternate slave addresses

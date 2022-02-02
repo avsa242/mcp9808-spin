@@ -37,7 +37,7 @@ OBJ
     cfg         : "core.con.boardcfg.flip"
     time        : "time"
     int         : "string.integer"
-    mcp9808     : "sensor.temperature.mcp9808.i2c"
+    mcp9808     : "sensor.temperature.mcp9808"
 
 PUB Main{} | t
 
