@@ -3,9 +3,9 @@
     Filename: sensor.temperature.mcp9808.i2c.spin
     Author: Jesse Burt
     Description: Driver for Microchip MCP9808 temperature sensors
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Jul 26, 2020
-    Updated Aug 15, 2021
+    Updated Mar 27, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
