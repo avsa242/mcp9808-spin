@@ -5,12 +5,12 @@
     Description: Driver for Microchip MCP9808 temperature sensors
     Copyright (c) 2022
     Started Jul 26, 2020
-    Updated May 13, 2022
+    Updated May 14, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
-{ pull in methods common to all Temp/RH drivers }
-#include "sensor.temp_rh.common.spinh"
+{ pull in methods common to all Temp drivers }
+#include "sensor.temp-common.spinh"
 
 CON
 
