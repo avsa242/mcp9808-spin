@@ -238,12 +238,6 @@ PUB Powered(state): curr_state
     state := ((curr_state & core#SHDN_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB RHData{}
-' dummy method
-
-PUB RHWord2Pct(rh_word)
-' dummy method
-
 PUB TempData{}: temp_adc
 ' Read temperature ADC data
 '   Returns: s13
