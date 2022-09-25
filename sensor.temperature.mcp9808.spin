@@ -61,7 +61,7 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
             time.usleep(core#T_POR)
             ' check device bus presence:
             if i2c.present(SLAVE_WR | _addr_bits)
-                if deviceid{} == core#DEVID_RESP
+                if (dev_id{} == core#DEVID_RESP)
                     return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
@@ -75,11 +75,11 @@ PUB stop{}
 
 PUB defaults{}
 ' Factory defaults
-    tempscale(C)
+    temp_scale(C)
     powered(TRUE)
-    tempres(0_0625)
+    temp_res(0_0625)
 
-PUB deviceid{}: id
+PUB dev_id{}: id
 ' Read device identification
 '   Returns:
 '       Manufacturer ID: $0054 (MSW)
@@ -87,7 +87,7 @@ PUB deviceid{}: id
     readreg(core#MFR_ID, 2, @id.word[1])        ' 9808 doesn't support seq. R/W
     readreg(core#DEV_ID, 2, @id.word[0])        '   so do discrete reads
 
-PUB intactivestate(state): curr_state
+PUB int_polarity(state): curr_state
 ' Set interrupt active state
 '   Valid values: *LOW (0), HIGH (1)
 '   Any other value polls the chip and returns the current setting
@@ -103,7 +103,7 @@ PUB intactivestate(state): curr_state
     state := ((curr_state & core#ALTPOL_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB intclear{} | tmp
+PUB int_clr{} | tmp
 ' Clear interrupt
     readreg(core#CONFIG, 2, @tmp)
     tmp |= (1 << core#INTCLR)
@@ -118,7 +118,7 @@ PUB interrupt{}: active_ints
     readreg(core#TEMP, 2, @active_ints)
     active_ints >>= 13
 
-PUB inthysteresis(deg): curr_setting
+PUB int_hyst(deg): curr_setting
 ' Set interrupt Upper and Lower threshold hysteresis, in degrees Celsius
 '   Valid values:
 '       Value   represents
@@ -139,7 +139,7 @@ PUB inthysteresis(deg): curr_setting
     deg := ((curr_setting & core#HYST_MASK) | deg)
     writereg(core#CONFIG, 2, @deg)
 
-PUB intmask(mask): curr_mask
+PUB int_mask(mask): curr_mask
 ' Set interrupt mask
 '   Valid values:
 '      *0: Interrupts asserted for Upper, Lower, and Critical thresholds
@@ -156,7 +156,7 @@ PUB intmask(mask): curr_mask
     mask := ((curr_mask & core#ALTSEL_MASK) | mask)
     writereg(core#CONFIG, 2, @mask)
 
-PUB intmode(mode): curr_mode
+PUB int_mode(mode): curr_mode
 ' Set interrupt mode
 '   Valid values:
 '      *COMP (0): Comparator output
@@ -172,7 +172,7 @@ PUB intmode(mode): curr_mode
     mode := ((curr_mode & core#ALTMOD_MASK) | mode)
     writereg(core#CONFIG, 2, @mode)
 
-PUB intsenabled(state): curr_state
+PUB int_ena(state): curr_state
 ' Enable interrupts
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -187,7 +187,7 @@ PUB intsenabled(state): curr_state
     state := ((curr_state & core#ALTCNT_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB inttempcritthresh(level): curr_lvl
+PUB int_temp_crit_thresh(level): curr_lvl
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -197,9 +197,9 @@ PUB inttempcritthresh(level): curr_lvl
             writereg(core#ALERT_CRIT, 2, @level)
         other:
             readreg(core#ALERT_CRIT, 2, @curr_lvl)
-            return tempword2deg(curr_lvl)
+            return temp_word2deg(curr_lvl)
 
-PUB inttemphithresh(level): curr_lvl
+PUB int_temp_hi_thresh(level): curr_lvl
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -209,9 +209,9 @@ PUB inttemphithresh(level): curr_lvl
             writereg(core#ALERT_UPPER, 2, @level)
         other:
             readreg(core#ALERT_UPPER, 2, @curr_lvl)
-            return tempword2deg(curr_lvl)
+            return temp_word2deg(curr_lvl)
 
-PUB inttemplothresh(level): curr_lvl
+PUB int_temp_lo_thresh(level): curr_lvl
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
 '   Any other value polls the chip and returns the current setting
@@ -221,7 +221,7 @@ PUB inttemplothresh(level): curr_lvl
             writereg(core#ALERT_LOWER, 2, @level)
         other:
             readreg(core#ALERT_LOWER, 2, @curr_lvl)
-            return tempword2deg(curr_lvl)
+            return temp_word2deg(curr_lvl)
 
 PUB powered(state): curr_state
 ' Enable sensor power
@@ -238,13 +238,13 @@ PUB powered(state): curr_state
     state := ((curr_state & core#SHDN_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB tempdata{}: temp_adc
+PUB temp_data{}: temp_adc
 ' Read temperature ADC data
 '   Returns: s13
     temp_adc := 0
     readreg(core#TEMP, 2, @temp_adc)
 
-PUB tempres(deg_c): curr_res
+PUB temp_res(deg_c): curr_res
 ' Set temperature resolution, in degrees Celsius (fractional)
 '   Valid values:
 '       Value   represents      Conversion time
@@ -262,7 +262,7 @@ PUB tempres(deg_c): curr_res
             readreg(core#RESOLUTION, 1, @curr_res)
             return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
 
-PUB tempword2deg(temp_word): temp | whole, part
+PUB temp_word2deg(temp_word): temp | whole, part
 ' Convert temperature ADC word to temperature
 '   Returns: temperature, in hundredths of a degree, in chosen scale
     temp_word := (temp_word << 19) ~> 19        ' Extend sign bit (#12)
