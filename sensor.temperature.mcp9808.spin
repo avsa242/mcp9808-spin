@@ -5,7 +5,7 @@
     Description: Driver for Microchip MCP9808 temperature sensors
     Copyright (c) 2022
     Started Jul 26, 2020
-    Updated May 25, 2022
+    Updated Sep 25, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -187,41 +187,44 @@ PUB int_ena(state): curr_state
     state := ((curr_state & core#ALTCNT_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB int_temp_crit_thresh(level): curr_lvl
+PUB int_crit_thresh{}: thresh
+' Get critical (high) temperature interrupt threshold
+'   Returns: hundredths of a degree Celsius
+    thresh := 0
+    readreg(core#ALERT_CRIT, 2, @thresh)
+    return temp_word2deg(thresh)
+
+PUB int_set_crit_thresh(thresh)
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
-'   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
-'   Any other value polls the chip and returns the current setting
-    case level
-        -256_00..255_94:
-            level := calctempword(level)
-            writereg(core#ALERT_CRIT, 2, @level)
-        other:
-            readreg(core#ALERT_CRIT, 2, @curr_lvl)
-            return temp_word2deg(curr_lvl)
+'   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
+    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
+    writereg(core#ALERT_CRIT, 2, @thresh)
 
-PUB int_temp_hi_thresh(level): curr_lvl
+PUB int_hi_thresh{}: thresh
+' Get high temperature interrupt threshold
+'   Returns: hundredths of a degree Celsius
+    thresh := 0
+    readreg(core#ALERT_UPPER, 2, @thresh)
+    return temp_word2deg(thresh)
+
+PUB int_set_hi_thresh(thresh)
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
-'   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
-'   Any other value polls the chip and returns the current setting
-    case level
-        -256_00..255_94:
-            level := calctempword(level)
-            writereg(core#ALERT_UPPER, 2, @level)
-        other:
-            readreg(core#ALERT_UPPER, 2, @curr_lvl)
-            return temp_word2deg(curr_lvl)
+'   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
+    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
+    writereg(core#ALERT_UPPER, 2, @thresh)
 
-PUB int_temp_lo_thresh(level): curr_lvl
+PUB int_lo_thresh{}: thresh
+' Get low temperature interrupt threshold
+'   Returns: hundredths of a degree Celsius
+    thresh := 0
+    readreg(core#ALERT_LOWER, 2, @thresh)
+    return temp_word2deg(thresh)
+
+PUB int_set_lo_thresh(thresh)
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
-'   Any other value polls the chip and returns the current setting
-    case level
-        -256_00..255_94:
-            level := calctempword(level)
-            writereg(core#ALERT_LOWER, 2, @level)
-        other:
-            readreg(core#ALERT_LOWER, 2, @curr_lvl)
-            return temp_word2deg(curr_lvl)
+    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
+    writereg(core#ALERT_LOWER, 2, @thresh)
 
 PUB powered(state): curr_state
 ' Enable sensor power
@@ -277,18 +280,18 @@ PUB temp_word2deg(temp_word): temp | whole, part
         other:
             return FALSE
 
-PRI calctempword(temp_c): temp_word
+PRI calc_temp_word(temp_c): temp_word
 ' Calculate word, given temperature in degrees Celsius
 '   Returns: 11-bit, two's complement word (0.25C resolution)
     temp_word := 0
-    if temp_c < 0
+    if (temp_c < 0)
         temp_word := temp_c + 256_00
     else
         temp_word := temp_c
 
     temp_word := ((temp_word * 4) << 2) / 100
 
-    if temp_c < 0
+    if (temp_c < 0)
         temp_word |= constant(1 << 12)
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
