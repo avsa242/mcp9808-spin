@@ -6,7 +6,7 @@
         * Temp data output
     Copyright (c) 2022
     Started Jul 26, 2020
-    Updated Sep 25, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 
@@ -31,8 +31,8 @@ CON
 
 OBJ
 
-    cfg:    "core.con.boardcfg.flip"
-    sensr:  "sensor.temperature.mcp9808"
+    cfg:    "boardcfg.flip"
+    sensor:  "sensor.temperature.mcp9808"
     ser:    "com.serial.terminal.ansi"
     time:   "time"
 
@@ -43,14 +43,14 @@ PUB setup{}
     ser.clear{}
     ser.strln(string("Serial terminal started"))
 
-    if (sensr.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS))
+    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS))
         ser.strln(string("MCP9808 driver started"))
     else
         ser.strln(string("MCP9808 driver failed to start - halting"))
         repeat
 
-    sensr.temp_scale(sensr#C)
-    sensr.temp_res(0_0625)                      ' 0_0625, 0_1250, 0_2500, 0_5000
+    sensor.temp_scale(sensor#C)
+    sensor.temp_res(0_0625)                      ' 0_0625, 0_1250, 0_2500, 0_5000
     demo{}
 
 #include "tempdemo.common.spinh"                ' code common to all temp/RH demos
