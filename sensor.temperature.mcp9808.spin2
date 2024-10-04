@@ -1,66 +1,87 @@
 {
-    --------------------------------------------
-    Filename: sensor.temperature.mcp9808.spin2
-    Author: Jesse Burt
-    Description: Driver for Microchip MCP9808 temperature sensors (P2 version)
-    Copyright (c) 2022
-    Started Jul 26, 2020
-    Updated Dec 27, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       sensor.temperature.mcp9808.spin2
+    Description:    Driver for Microchip MCP9808 temperature sensors
+    Author:         Jesse Burt
+    Started:        Jul 26, 2020
+    Updated:        Oct 4, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
-{ pull in methods common to all Temp drivers }
-#include "sensor.temp.common.spin2h"
+
+#include "sensor.temp.common.spin2h"            ' use code common to all temperature sensor drivers
 
 CON
 
-    { I2C }
-    SLAVE_WR    = core#SLAVE_ADDR
-    SLAVE_RD    = core#SLAVE_ADDR | 1
-    DEF_HZ      = 100_000
+    { default I/O settings; these can be overridden in the parent object }
+    SCL         = 0
+    SDA         = 1
+    I2C_FREQ    = 100_000
+    I2C_ADDR    = 0
+
+
+    SLAVE_WR    = core.SLAVE_ADDR
+    SLAVE_RD    = core.SLAVE_ADDR | 1
 
 ' Interrupt active states
     LOW         = 0
     HIGH        = 1
 
+
 VAR
 
     byte _addr_bits
+
 
 OBJ
 
     i2c : "com.i2c"                             ' I2C engine
     core: "core.con.mcp9808"                    ' HW-specific constants
 
+
 PUB null()
 ' This is not a top-level object
 
+
+PUB start(): status
+' Start using default I/O settings
+    return startx(SCL, SDA, I2C_FREQ, I2C_ADDR)
+
+
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
-' Start using custom I/O pins and I2C bus speed
-    ' validate pins, bus freq, and optional slave address bits:
-    if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and {
-}   I2C_HZ <= core.I2C_MAX_FREQ and lookdown(ADDR_BITS: %000..%111)
-        if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+' Start the driver with custom I/O settings
+'   SCL_PIN:    I2C clock, 0..63
+'   SDA_PIN:    I2C data, 0..63
+'   I2C_HZ:     I2C clock speed (max official specification is 400_000 but is unenforced)
+'   ADDR_BITS:  I2C alternate address bits (%000..%111)
+'   Returns:
+'       cog ID+1 of I2C engine on success
+'       0 on failure
+    if ( lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and lookdown(ADDR_BITS: %000..%111) )
+        if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
             _addr_bits := ADDR_BITS << 1
             waitus(core.T_POR)
             ' check device bus presence:
-            if (dev_id() == core.DEVID_RESP)
+            if ( dev_id() == core.DEVID_RESP )
                 return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
+
 PUB stop()
 ' Stop the driver
     i2c.deinit()
     _addr_bits := 0
+
 
 PUB defaults()
 ' Factory defaults
     temp_scale(C)
     powered(TRUE)
     temp_res(0_0625)
+
 
 PUB dev_id(): id | word tmp[2]
 ' Read device identification
@@ -71,18 +92,21 @@ PUB dev_id(): id | word tmp[2]
     id.word[1] := tmp[1]
     id.word[0] := tmp[0]
 
+
 PUB int_clear() | tmp
 ' Clear interrupt
     readreg(core.CONFIG, 2, @tmp)
     tmp |= (1 << core.INTCLR)
     writereg(core.CONFIG, 2, @tmp)
 
-PUB int_crit_thresh{}: thresh
+
+PUB int_crit_thresh(): thresh
 ' Get critical (high) temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
     thresh := 0
     readreg(core.ALERT_CRIT, 2, @thresh)
     return temp_word2deg(thresh)
+
 
 PUB int_ena(state=-2): curr_state
 ' Enable interrupts
@@ -90,21 +114,22 @@ PUB int_ena(state=-2): curr_state
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
     readreg(core.CONFIG, 2, @curr_state)
-    case absstate
+    case abs(state)
         0, 1:
             state := abs(state) << core.ALTCNT
+            state := ((curr_state & core.ALTCNT_MASK) | state)
+            writereg(core.CONFIG, 2, @state)
         other:
             return (((curr_state >> core.ALTCNT) & 1) == 1)
 
-    state := ((curr_state & core.ALTCNT_MASK) | state)
-    writereg(core.CONFIG, 2, @state)
 
-PUB int_hi_thresh{}: thresh
+PUB int_hi_thresh(): thresh
 ' Get high temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
     thresh := 0
     readreg(core.ALERT_UPPER, 2, @thresh)
     return temp_word2deg(thresh)
+
 
 PUB int_hyst(deg=-2): curr_setting
 ' Set interrupt Upper and Lower threshold hysteresis, in degrees Celsius
@@ -120,12 +145,12 @@ PUB int_hyst(deg=-2): curr_setting
     case deg
         0, 1_5, 3_0, 6_0:
             deg := lookdownz(deg: 0, 1_5, 3_0, 6_0) << core.HYST
+            deg := ((curr_setting & core.HYST_MASK) | deg)
+            writereg(core.CONFIG, 2, @deg)
         other:
             curr_setting := (curr_setting >> core.HYST) & core.HYST_BITS
             return lookupz(curr_setting: 0, 1_5, 3_0, 6_0)
 
-    deg := ((curr_setting & core.HYST_MASK) | deg)
-    writereg(core.CONFIG, 2, @deg)
 
 PUB int_latch_ena(mode=-2): curr_mode
 ' Enable interrupt latch
@@ -141,18 +166,19 @@ PUB int_latch_ena(mode=-2): curr_mode
     case abs(mode)
         0, 1:
             mode &= 1
+            mode := ((curr_mode & core.ALTMOD_MASK) | mode)
+            writereg(core.CONFIG, 2, @mode)
         other:
             return (curr_mode & 1)
 
-    mode := ((curr_mode & core.ALTMOD_MASK) | mode)
-    writereg(core.CONFIG, 2, @mode)
 
-PUB int_lo_thresh{}: thresh
+PUB int_lo_thresh(): thresh
 ' Get low temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
     thresh := 0
     readreg(core.ALERT_LOWER, 2, @thresh)
     return temp_word2deg(thresh)
+
 
 PUB int_mask(mask=-2): curr_mask
 ' Set interrupt mask
@@ -165,11 +191,11 @@ PUB int_mask(mask=-2): curr_mask
     case mask
         0, 1:
             mask <<= core.ALTSEL
+            mask := ((curr_mask & core.ALTSEL_MASK) | mask)
+            writereg(core.CONFIG, 2, @mask)
         other:
             return ((curr_mask >> core.ALTSEL) & 1)
 
-    mask := ((curr_mask & core.ALTSEL_MASK) | mask)
-    writereg(core.CONFIG, 2, @mask)
 
 PUB int_polarity(state=-2): curr_state
 ' Set interrupt active state
@@ -181,29 +207,32 @@ PUB int_polarity(state=-2): curr_state
     case state
         LOW, HIGH:
             state <<= core.ALTPOL
+            state := ((curr_state & core.ALTPOL_MASK) | state)
+            writereg(core.CONFIG, 2, @state)
         other:
             return (curr_state >> core.ALTPOL) & 1
 
-    state := ((curr_state & core.ALTPOL_MASK) | state)
-    writereg(core.CONFIG, 2, @state)
 
 PUB int_set_crit_thresh(thresh)
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core#ALERT_CRIT, 2, @thresh)
+    writereg(core.ALERT_CRIT, 2, @thresh)
+
 
 PUB int_set_hi_thresh(thresh)
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core#ALERT_UPPER, 2, @thresh)
+    writereg(core.ALERT_UPPER, 2, @thresh)
+
 
 PUB int_set_lo_thresh(thresh)
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core#ALERT_LOWER, 2, @thresh)
+    writereg(core.ALERT_LOWER, 2, @thresh)
+
 
 PUB interrupt(): active_ints
 ' Flag indicating interrupt(s) asserted
@@ -214,6 +243,7 @@ PUB interrupt(): active_ints
     readreg(core.TEMP, 2, @active_ints)
     active_ints >>= 13
 
+
 PUB powered(state=-2): curr_state
 ' Enable sensor power
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
@@ -223,17 +253,18 @@ PUB powered(state=-2): curr_state
     case abs(state)
         0, 1:
             state := (abs(state) ^ 1) << core.SHDN
+            state := ((curr_state & core.SHDN_MASK) | state)
+            writereg(core.CONFIG, 2, @state)
         other:
             return ((((curr_state >> core.SHDN) & 1) ^ 1) == 1)
 
-    state := ((curr_state & core.SHDN_MASK) | state)
-    writereg(core.CONFIG, 2, @state)
 
 PUB temp_data(): temp_adc
 ' Read temperature ADC data
 '   Returns: s13
     temp_adc := 0
     readreg(core.TEMP, 2, @temp_adc)
+
 
 PUB temp_res(deg_c=-2): curr_res
 ' Set temperature resolution, in degrees Celsius (fractional)
@@ -253,8 +284,10 @@ PUB temp_res(deg_c=-2): curr_res
             readreg(core.RESOLUTION, 1, @curr_res)
             return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
 
+
 PUB temp_word2deg(temp_word): temp | whole, part
-' Calculate temperature in degrees Celsius, given ADC word
+' Convert temperature ADC word to temperature
+'   Returns: temperature, in hundredths of a degree, in chosen scale
     temp_word := (temp_word << 19) sar 19       ' Extend sign bit (#12)
     whole := (temp_word / 16) * 100             ' Scale up to hundredths
     part := ((temp_word // 16) * 0_0625) / 100
@@ -267,19 +300,21 @@ PUB temp_word2deg(temp_word): temp | whole, part
         other:
             return FALSE
 
+
 PRI calc_temp_word(temp_c): temp_word
 ' Calculate word, given temperature in degrees Celsius
 '   Returns: 11-bit, two's complement word (0.25C resolution)
     temp_word := 0
-    if (temp_c < 0)
+    if ( temp_c < 0 )
         temp_word := temp_c + 256_00
     else
         temp_word := temp_c
 
     temp_word := ((temp_word * 4) << 2) / 100
 
-    if (temp_c < 0)
+    if ( temp_c < 0 )
         temp_word |= $1000
+
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from the slave device into ptr_buff
@@ -297,6 +332,7 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
+
 PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes to the slave device from ptr_buff
     case reg_nr
@@ -310,9 +346,10 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
