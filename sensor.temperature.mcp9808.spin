@@ -89,53 +89,46 @@ PUB defaults()
     temp_res(0_0625)
 
 
-PUB dev_id(): id | tmp[2]
+PUB dev_id(): id
 ' Read device identification
 '   Returns:
 '       Bits: [15..8]: $0054 (mfr ID), [7..0]: $0400 (rev)
-    tmp[1] := readreg(core.MFR_ID)              ' 9808 doesn't support seq. R/W
-    tmp[0] := readreg(core.DEV_ID)              '   so do discrete reads
-    id.word[1] := tmp[1]
-    id.word[0] := tmp[0]
+    id.word[1] := readreg(core.MFR_ID)              ' 9808 doesn't support seq. R/W
+    id.word[0] := readreg(core.DEV_ID)              '   so do discrete reads
 
 
-PUB int_clear() | tmp
+PUB int_clear()
 ' Clear interrupt
-    tmp := readreg(core.CONFIG)
-    tmp |= (1 << core.INTCLR)
-    writereg(core.CONFIG, tmp)
+    writereg(core.CONFIG, ( readreg(core.CONFIG) | (1 << core.INTCLR) ) )
 
 
-PUB int_crit_thresh(): thresh
+PUB int_crit_thresh(): t
 ' Get critical (high) temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := readreg(core.ALERT_CRIT)
-    return temp_word2deg(thresh)
+    return temp_word2deg( readreg(core.ALERT_CRIT) )
 
 
-PUB int_ena(state=-2): curr_state
+PUB int_ena(s=-2): cs
 ' Enable interrupts
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := readreg(core.CONFIG)
-    case ||(state)
+    cs := readreg(core.CONFIG)
+    case ||(s)
         0, 1:
-            state := ||(state) << core.ALTCNT
-            state := ((curr_state & core.ALTCNT_MASK) | state)
-            writereg(core.CONFIG, state)
+            s := ( (cs & core.ALTCNT_MASK) | ( ||(s) << core.ALTCNT) )
+            writereg(core.CONFIG, s)
         other:
-            return (((curr_state >> core.ALTCNT) & 1) == 1)
+            return ( ( (cs >> core.ALTCNT) & 1) == 1)
 
 
-PUB int_hi_thresh(): thresh
+PUB int_hi_thresh(): t
 ' Get high temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := readreg(core.ALERT_UPPER)
-    return temp_word2deg(thresh)
+    return temp_word2deg( readreg(core.ALERT_UPPER) )
 
 
-PUB int_hyst(deg=-2): curr_setting
-' Set interrupt Upper and Lower threshold hysteresis, in degrees Celsius
+PUB int_hyst(h=-2): cs
+' Set interrupt Upper and Lower threshold hysteresis, in tenths (0.1) degrees Celsius
 '   Valid values:
 '       Value   represents
 '       0       0
@@ -143,18 +136,18 @@ PUB int_hyst(deg=-2): curr_setting
 '       3_0     3.0C
 '       6_0     6.0C
 '   Any other value polls the chip and returns the current setting
-    curr_setting := readreg(core.CONFIG)
-    case deg
+    cs := readreg(core.CONFIG)
+    case h
         0, 1_5, 3_0, 6_0:
-            deg := lookdownz(deg: 0, 1_5, 3_0, 6_0) << core.HYST
-            deg := ((curr_setting & core.HYST_MASK) | deg)
-            writereg(core.CONFIG, deg)
+            h := lookdownz(h: 0, 1_5, 3_0, 6_0) << core.HYST
+            h := ( (cs & core.HYST_MASK) | h)
+            writereg(core.CONFIG, h)
         other:
-            curr_setting := (curr_setting >> core.HYST) & core.HYST_BITS
-            return lookupz(curr_setting: 0, 1_5, 3_0, 6_0)
+            cs := (cs >> core.HYST) & core.HYST_BITS
+            return lookupz(cs: 0, 1_5, 3_0, 6_0)
 
 
-PUB int_latch_ena(mode=-2): curr_mode
+PUB int_latch_ena(m=-2): cm
 ' Enable interrupt latch
 '   Valid values:
 '      *FALSE (0) (default): triggered interrupts clear automatically when measurements return
@@ -163,106 +156,101 @@ PUB int_latch_ena(mode=-2): curr_mode
 '   Any other value polls the chip and returns the current setting
 '   NOTE: This can't be set to TRUE when interrupts are asserted only for crossing the critical
 '       threhsold, int_mask() == 1 (hardware limitation)
-    curr_mode := readreg(core.CONFIG)
-    case ||(mode)
+    cm := readreg(core.CONFIG)
+    case ||(m)
         0, 1:
-            mode &= 1
-            mode := ((curr_mode & core.ALTMOD_MASK) | mode)
-            writereg(core.CONFIG, mode)
+            m &= 1
+            m := ((cm & core.ALTMOD_MASK) | m)
+            writereg(core.CONFIG, m)
         other:
-            return (curr_mode & 1)
+            return (cm & 1)
 
 
-PUB int_lo_thresh(): thresh
+PUB int_lo_thresh(): t
 ' Get low temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := readreg(core.ALERT_LOWER)
-    return temp_word2deg(thresh)
+    return temp_word2deg( readreg(core.ALERT_LOWER) )
 
 
-PUB int_mask(mask=-2): curr_mask
+PUB int_mask(m=-2): cm
 ' Set interrupt mask
 '   Valid values:
 '      *0: Interrupts asserted for Upper, Lower, and Critical thresholds
 '       1: Interrupts asserted only for Critical threshold
 '   Any other value polls the chip and returns the current setting
-    curr_mask := readreg(core.CONFIG)
-    case mask
+    cm := readreg(core.CONFIG)
+    case m
         0, 1:
-            mask <<= core.ALTSEL
-            mask := ((curr_mask & core.ALTSEL_MASK) | mask)
-            writereg(core.CONFIG, mask)
+            m <<= core.ALTSEL
+            m := ((cm & core.ALTSEL_MASK) | m)
+            writereg(core.CONFIG, m)
         other:
-            return ((curr_mask >> core.ALTSEL) & 1)
+            return ((cm >> core.ALTSEL) & 1)
 
 
-PUB int_polarity(state=-2): curr_state
+PUB int_polarity(s=-2): cs
 ' Set interrupt active state
 '   Valid values: *LOW (0), HIGH (1)
 '   Any other value polls the chip and returns the current setting
 '   NOTE: LOW (Active-low) requires the use of a pull-up resistor
-    curr_state := readreg(core.CONFIG)
-    case state
+    cs := readreg(core.CONFIG)
+    case s
         LOW, HIGH:
-            state <<= core.ALTPOL
-            state := ((curr_state & core.ALTPOL_MASK) | state)
-            writereg(core.CONFIG, state)
+            s <<= core.ALTPOL
+            s := ((cs & core.ALTPOL_MASK) | s)
+            writereg(core.CONFIG, s)
         other:
-            return (curr_state >> core.ALTPOL) & 1
+            return (cs >> core.ALTPOL) & 1
 
 
-PUB int_set_crit_thresh(thresh)
+PUB int_set_crit_thresh(t)
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
-    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_CRIT, thresh)
+    writereg(core.ALERT_CRIT, calc_temp_word(-256_00 #> t <# 255_94) )
 
 
-PUB int_set_hi_thresh(thresh)
+PUB int_set_hi_thresh(t)
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
-    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_UPPER, thresh)
+    writereg(core.ALERT_UPPER, calc_temp_word(-256_00 #> t <# 255_94) )
 
 
-PUB int_set_lo_thresh(thresh)
+PUB int_set_lo_thresh(t)
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
-    thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_LOWER, thresh)
+    writereg(core.ALERT_LOWER, calc_temp_word(-256_00 #> t <# 255_94) )
 
 
-PUB interrupt(): active_ints
+PUB interrupt(): i
 ' Flag indicating interrupt(s) asserted
 '   Returns: 3-bit mask, [2..0]
 '       2: Temperature at or above Critical threshold
 '       1: Temperature above high threshold
 '       0: Temperature below low threshold
-    active_ints := readreg(core.TEMP)
-    active_ints >>= 13
+    return ( readreg(core.TEMP) >> 13 )
 
 
-PUB powered(state=-2): curr_state
+PUB powered(s=-2): cs
 ' Enable sensor power
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := readreg(core.CONFIG)
-    case ||(state)
+    cs := readreg(core.CONFIG)
+    case ||(s)
         0, 1:
-            state := (||(state) ^ 1) << core.SHDN
-            state := ((curr_state & core.SHDN_MASK) | state)
-            writereg(core.CONFIG, state)
+            s := (||(s) ^ 1) << core.SHDN
+            s := ( (cs & core.SHDN_MASK) | s)
+            writereg(core.CONFIG, s)
         other:
-            return ((((curr_state >> core.SHDN) & 1) ^ 1) == 1)
+            return ( ( ( (cs >> core.SHDN) & 1) ^ 1) == 1)
 
 
-PUB temp_data(): temp_adc
+PUB temp_data(): t
 ' Read temperature ADC data
 '   Returns: s13
-    temp_adc := readreg(core.TEMP)
+    return readreg(core.TEMP)
 
 
-PUB temp_res(deg_c=-2): curr_res
+PUB temp_res(r=-2): cr
 ' Set temperature resolution, in degrees Celsius (fractional)
 '   Valid values:
 '       Value   represents      Conversion time
@@ -271,44 +259,44 @@ PUB temp_res(deg_c=-2): curr_res
 '       0_2500  0.25C           (65ms)
 '       0_5000  0.5C            (30ms)
 '   Any other value polls the chip and returns the current setting
-    case deg_c
+    case r
         0_0625, 0_1250, 0_2500, 0_5000:
-            deg_c := lookdownz(deg_c: 0_5000, 0_2500, 0_1250, 0_0625)
-            writereg(core.RESOLUTION, deg_c, 1)
+            r := lookdownz(r: 0_5000, 0_2500, 0_1250, 0_0625)
+            writereg(core.RESOLUTION, r, 1)
         other:
-            curr_res := readreg(core.RESOLUTION, 1)
-            return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
+            cr := readreg(core.RESOLUTION, 1)
+            return lookupz(cr: 0_5000, 0_2500, 0_1250, 0_0625)
 
 
-PUB temp_word2deg(temp_word): temp | whole, part
+PUB temp_word2deg(w): t | whole, part
 ' Convert temperature ADC word to temperature
 '   Returns: temperature, in hundredths of a degree, in chosen scale
-    temp_word := (temp_word << 19) ~> 19        ' Extend sign bit (#12)
-    whole := (temp_word / 16) * 100             ' Scale up to hundredths
-    part := ((temp_word // 16) * 0_0625) / 100
-    temp := (whole + part)
+    w := (w << 19) ~> 19        ' Extend sign bit (#12)
+    whole := (w / 16) * 100             ' Scale up to hundredths
+    part := ((w // 16) * 0_0625) / 100
+    t := (whole + part)
     case _temp_scale
         C:
-            return temp
+            return t
         F:
-            return ((temp * 9_00) / 5_00) + 32_00
+            return ( (t * 9_00) / 5_00) + 32_00
         other:
             return FALSE
 
 
-PRI calc_temp_word(temp_c): temp_word
+PRI calc_temp_word(t): w
 ' Calculate word, given temperature in degrees Celsius
 '   Returns: 11-bit, two's complement word (0.25C resolution)
-    temp_word := 0
-    if ( temp_c < 0 )
-        temp_word := temp_c + 256_00
+    w := 0
+    if ( t < 0 )
+        w := t + 256_00
     else
-        temp_word := temp_c
+        w := t
 
-    temp_word := ((temp_word * 4) << 2) / 100
+    w := ((w * 4) << 2) / 100
 
-    if ( temp_c < 0 )
-        temp_word |= $1000
+    if ( t < 0 )
+        w |= $1000
 
 
 PRI readreg(reg_nr, len=2): v | cmd_pkt
