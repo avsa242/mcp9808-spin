@@ -4,8 +4,8 @@
     Description:    Driver for Microchip MCP9808 temperature sensors
     Author:         Jesse Burt
     Started:        Jul 26, 2020
-    Updated:        Oct 4, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 13, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -93,24 +93,23 @@ PUB dev_id(): id | tmp[2]
 ' Read device identification
 '   Returns:
 '       Bits: [15..8]: $0054 (mfr ID), [7..0]: $0400 (rev)
-    readreg(core.MFR_ID, 2, @tmp[1])            ' 9808 doesn't support seq. R/W
-    readreg(core.DEV_ID, 2, @tmp[0])            '   so do discrete reads
+    tmp[1] := readreg(core.MFR_ID)              ' 9808 doesn't support seq. R/W
+    tmp[0] := readreg(core.DEV_ID)              '   so do discrete reads
     id.word[1] := tmp[1]
     id.word[0] := tmp[0]
 
 
 PUB int_clear() | tmp
 ' Clear interrupt
-    readreg(core.CONFIG, 2, @tmp)
+    tmp := readreg(core.CONFIG)
     tmp |= (1 << core.INTCLR)
-    writereg(core.CONFIG, 2, @tmp)
+    writereg(core.CONFIG, tmp)
 
 
 PUB int_crit_thresh(): thresh
 ' Get critical (high) temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := 0
-    readreg(core.ALERT_CRIT, 2, @thresh)
+    thresh := readreg(core.ALERT_CRIT)
     return temp_word2deg(thresh)
 
 
@@ -118,13 +117,12 @@ PUB int_ena(state=-2): curr_state
 ' Enable interrupts
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.CONFIG, 2, @curr_state)
+    curr_state := readreg(core.CONFIG)
     case ||(state)
         0, 1:
             state := ||(state) << core.ALTCNT
             state := ((curr_state & core.ALTCNT_MASK) | state)
-            writereg(core.CONFIG, 2, @state)
+            writereg(core.CONFIG, state)
         other:
             return (((curr_state >> core.ALTCNT) & 1) == 1)
 
@@ -132,8 +130,7 @@ PUB int_ena(state=-2): curr_state
 PUB int_hi_thresh(): thresh
 ' Get high temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := 0
-    readreg(core.ALERT_UPPER, 2, @thresh)
+    thresh := readreg(core.ALERT_UPPER)
     return temp_word2deg(thresh)
 
 
@@ -146,13 +143,12 @@ PUB int_hyst(deg=-2): curr_setting
 '       3_0     3.0C
 '       6_0     6.0C
 '   Any other value polls the chip and returns the current setting
-    curr_setting := 0
-    readreg(core.CONFIG, 2, @curr_setting)
+    curr_setting := readreg(core.CONFIG)
     case deg
         0, 1_5, 3_0, 6_0:
             deg := lookdownz(deg: 0, 1_5, 3_0, 6_0) << core.HYST
             deg := ((curr_setting & core.HYST_MASK) | deg)
-            writereg(core.CONFIG, 2, @deg)
+            writereg(core.CONFIG, deg)
         other:
             curr_setting := (curr_setting >> core.HYST) & core.HYST_BITS
             return lookupz(curr_setting: 0, 1_5, 3_0, 6_0)
@@ -167,13 +163,12 @@ PUB int_latch_ena(mode=-2): curr_mode
 '   Any other value polls the chip and returns the current setting
 '   NOTE: This can't be set to TRUE when interrupts are asserted only for crossing the critical
 '       threhsold, int_mask() == 1 (hardware limitation)
-    curr_mode := 0
-    readreg(core.CONFIG, 2, @curr_mode)
+    curr_mode := readreg(core.CONFIG)
     case ||(mode)
         0, 1:
             mode &= 1
             mode := ((curr_mode & core.ALTMOD_MASK) | mode)
-            writereg(core.CONFIG, 2, @mode)
+            writereg(core.CONFIG, mode)
         other:
             return (curr_mode & 1)
 
@@ -181,8 +176,7 @@ PUB int_latch_ena(mode=-2): curr_mode
 PUB int_lo_thresh(): thresh
 ' Get low temperature interrupt threshold
 '   Returns: hundredths of a degree Celsius
-    thresh := 0
-    readreg(core.ALERT_LOWER, 2, @thresh)
+    thresh := readreg(core.ALERT_LOWER)
     return temp_word2deg(thresh)
 
 
@@ -192,13 +186,12 @@ PUB int_mask(mask=-2): curr_mask
 '      *0: Interrupts asserted for Upper, Lower, and Critical thresholds
 '       1: Interrupts asserted only for Critical threshold
 '   Any other value polls the chip and returns the current setting
-    curr_mask := 0
-    readreg(core.CONFIG, 2, @curr_mask)
+    curr_mask := readreg(core.CONFIG)
     case mask
         0, 1:
             mask <<= core.ALTSEL
             mask := ((curr_mask & core.ALTSEL_MASK) | mask)
-            writereg(core.CONFIG, 2, @mask)
+            writereg(core.CONFIG, mask)
         other:
             return ((curr_mask >> core.ALTSEL) & 1)
 
@@ -208,13 +201,12 @@ PUB int_polarity(state=-2): curr_state
 '   Valid values: *LOW (0), HIGH (1)
 '   Any other value polls the chip and returns the current setting
 '   NOTE: LOW (Active-low) requires the use of a pull-up resistor
-    curr_state := 0
-    readreg(core.CONFIG, 2, @curr_state)
+    curr_state := readreg(core.CONFIG)
     case state
         LOW, HIGH:
             state <<= core.ALTPOL
             state := ((curr_state & core.ALTPOL_MASK) | state)
-            writereg(core.CONFIG, 2, @state)
+            writereg(core.CONFIG, state)
         other:
             return (curr_state >> core.ALTPOL) & 1
 
@@ -223,21 +215,21 @@ PUB int_set_crit_thresh(thresh)
 ' Set critical (high) temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_CRIT, 2, @thresh)
+    writereg(core.ALERT_CRIT, thresh)
 
 
 PUB int_set_hi_thresh(thresh)
 ' Set high temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C; clamped to range)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_UPPER, 2, @thresh)
+    writereg(core.ALERT_UPPER, thresh)
 
 
 PUB int_set_lo_thresh(thresh)
 ' Set low temperature interrupt threshold, in hundredths of a degree Celsius
 '   Valid values: -256_00..255_94 (-256.00C .. 255.94C)
     thresh := calc_temp_word(-256_00 #> thresh <# 255_94)
-    writereg(core.ALERT_LOWER, 2, @thresh)
+    writereg(core.ALERT_LOWER, thresh)
 
 
 PUB interrupt(): active_ints
@@ -246,7 +238,7 @@ PUB interrupt(): active_ints
 '       2: Temperature at or above Critical threshold
 '       1: Temperature above high threshold
 '       0: Temperature below low threshold
-    readreg(core.TEMP, 2, @active_ints)
+    active_ints := readreg(core.TEMP)
     active_ints >>= 13
 
 
@@ -254,13 +246,12 @@ PUB powered(state=-2): curr_state
 ' Enable sensor power
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.CONFIG, 2, @curr_state)
+    curr_state := readreg(core.CONFIG)
     case ||(state)
         0, 1:
             state := (||(state) ^ 1) << core.SHDN
             state := ((curr_state & core.SHDN_MASK) | state)
-            writereg(core.CONFIG, 2, @state)
+            writereg(core.CONFIG, state)
         other:
             return ((((curr_state >> core.SHDN) & 1) ^ 1) == 1)
 
@@ -268,8 +259,7 @@ PUB powered(state=-2): curr_state
 PUB temp_data(): temp_adc
 ' Read temperature ADC data
 '   Returns: s13
-    temp_adc := 0
-    readreg(core.TEMP, 2, @temp_adc)
+    temp_adc := readreg(core.TEMP)
 
 
 PUB temp_res(deg_c=-2): curr_res
@@ -284,10 +274,9 @@ PUB temp_res(deg_c=-2): curr_res
     case deg_c
         0_0625, 0_1250, 0_2500, 0_5000:
             deg_c := lookdownz(deg_c: 0_5000, 0_2500, 0_1250, 0_0625)
-            writereg(core.RESOLUTION, 1, @deg_c)
+            writereg(core.RESOLUTION, deg_c, 1)
         other:
-            curr_res := 0
-            readreg(core.RESOLUTION, 1, @curr_res)
+            curr_res := readreg(core.RESOLUTION, 1)
             return lookupz(curr_res: 0_5000, 0_2500, 0_1250, 0_0625)
 
 
@@ -322,8 +311,9 @@ PRI calc_temp_word(temp_c): temp_word
         temp_word |= $1000
 
 
-PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI readreg(reg_nr, len=2): v | cmd_pkt
 ' Read nr_bytes from the slave device into ptr_buff
+    v := 0
     case reg_nr                                 ' validate reg number
         $00..$08:
             cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
@@ -333,13 +323,13 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 
             i2c.start()
             i2c.write(SLAVE_RD | _addr_bits)
-            i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c.NAK)
+            i2c.rdblock_msbf(@v, len, i2c.NAK)
             i2c.stop()
         other:
             return
 
 
-PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI writereg(reg_nr, val, len=2) | cmd_pkt
 ' Write nr_bytes to the slave device from ptr_buff
     case reg_nr
         $01..$04, $08:
@@ -347,7 +337,7 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
             cmd_pkt.byte[1] := reg_nr & $0F
             i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.wrblock_msbf(ptr_buff, nr_bytes)
+            i2c.wrblock_msbf(@val, len)
             i2c.stop()
         other:
             return
@@ -355,7 +345,7 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
